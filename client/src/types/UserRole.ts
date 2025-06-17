@@ -1,0 +1,12 @@
+// src/types/UserRole.ts
+export enum UserRole {
+  DATABASE_ADMIN = 'DATABASE_ADMIN',
+  SYSTEM_ADMIN = 'SYSTEM_ADMIN',
+  HEAD = 'HEAD',
+  HR = 'HR',
+  FINANCE = 'FINANCE',
+  RECEPTION = 'RECEPTION',
+  LAND_BANK = 'LAND_BANK',
+  OFFICER = 'OFFICER',
+  OTHER = 'OTHER',
+}
