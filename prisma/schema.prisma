@@ -1,0 +1,398 @@
+generator client {
+  provider = "prisma-client-js"
+  output = "./client"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Office model
+model Office {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  type  OFFICE_TYPE
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt()
+  
+  users       User[]
+  lands       Land[]
+  appointments Appointment[]
+  announcements Announcement[]
+  landTransfers LandTransfer[]
+  feedbacks   Feedback[]
+  employees  Employee[]
+  userActivities UserActivity[]
+  userReports UserReport[]
+  hrReports HRRepost[]
+  landFiles LandFile[]
+  landTransferFiles LandTransferFile[]
+}
+
+// System user
+model User {
+  id         String   @id @default(uuid())
+  email      String   @unique
+  phone      String   @unique
+  username   String   @unique
+  firstName  String
+  middleName String
+  lastName   String
+  password   String?
+  status     USER_STATUS @default(ACTIVE)
+  role       USER_ROLE @default(OTHER)
+  officeId   String?   // Relates the user to an office
+  lastSeen DateTime?
+  office     Office?   @relation(fields: [officeId], references: [id])
+  createdAt  DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt()
+
+  activities UserActivity[]
+  announcements Announcement[] @relation("UserAnnouncements")
+  auditedAnnouncements Announcement[] @relation("UserAuditedAnnouncements")
+  landTransfers LandTransfer[]
+  landRegistrations Land[]
+  hrReports HRRepost[]
+}
+
+model Announcement {
+  id            String   @id @default(uuid())
+  title         String
+  description   String
+  number        Int
+  stampFile     String?
+  signatureFile String?
+  publisherId   String
+  status       ANNOUNCEMENT_STATUS @default(DRAFT)
+  auditorId     String?   
+  officeId      String?   
+  createdAt     DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt()
+
+  office        Office?   @relation(fields: [officeId], references: [id])
+  publisher     User?     @relation(fields: [publisherId], references: [id], name: "UserAnnouncements")
+  auditor       User?     @relation(fields: [auditorId], references: [id], name: "UserAuditedAnnouncements")
+}
+
+
+
+model LandOwner {
+  id         String   @id @default(uuid())
+  firstName  String
+  middleName String
+  lastName   String
+  gender     GENDER
+  phone      String   @unique
+  email      String?  @unique
+  nationalIdUrl String?
+  createdAt  DateTime @default(now())
+  updatedAt   DateTime @updatedAt()
+
+  lands      Land[]
+  landHistory LandTransfer[]
+}
+
+model Land {
+  id               String   @id @default(uuid())
+  name String?
+  landOwnerId      String?
+  area             Decimal
+  type             LAND_TYPE @default(NOT_ASSIGNED)
+  grade            Int @default(0)
+  registrationNo   Int? @unique
+  parcelId         String?
+  certificationNo  String? @unique
+  wereda           String
+  subcity          String?
+  absoluteLocation         String?
+  mapUrl           String?
+  comment          String?
+  landUsePurpose   String?
+  marketValue      Decimal?
+  encumbrances     String?
+  landStatus       LAND_STATUS @default(VACANT)
+  ownershipType    OWNERSHIP_TYPE @default(NOT_ASSIGNED)
+  officeId         String
+  createdAt        DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt()
+  registeredBy String
+
+  office           Office   @relation(fields: [officeId], references: [id])
+  landOwner        LandOwner? @relation(fields: [landOwnerId], references: [id])
+  registrar        User @relation(fields: [registeredBy], references: [id])
+  landTransferHistory LandTransfer[]
+  landFiles       LandFile[]
+}
+
+model LandFile {
+  id        String   @id @default(uuid())
+  landId    String
+  fileUrl String
+  filePath String
+  fileName String
+  fileType String
+  officeId String
+  uploadedAt DateTime @default(now())
+
+  office     Office  @relation(fields: [officeId], references: [id])
+  land      Land @relation(fields: [landId], references: [id])
+}
+
+model LandTransfer {
+  id          String   @id @default(uuid())
+  landId      String
+  landOwnerId String
+  officeId    String?  // Relates the land transfer to an office
+  transferDate DateTime @default(now())
+  transferredBy String
+  
+  office      Office?  @relation(fields: [officeId], references: [id])
+  land        Land     @relation(fields: [landId], references: [id])
+  landOwner   LandOwner @relation(fields: [landOwnerId], references: [id])
+  transferor User @relation(fields: [transferredBy], references: [id])
+  landTransferFiles LandTransferFile[]
+}
+
+model LandTransferFile {
+  id       String   @id @default(uuid())
+    landTransferId    String
+  filePath String
+  fileName String
+  fileType String
+  officeId String
+  uploadedAt DateTime @default(now())
+
+  landTransfer LandTransfer @relation(fields: [landTransferId], references: [id])
+  office       Office  @relation(fields: [officeId], references: [id])
+}
+
+
+model Appointment {
+  id          String   @id @default(uuid())
+  firstName   String
+  middleName  String
+  lastName    String
+  phone       String
+  email       String?
+  address     String
+  reason        String
+  rejectionReason String?
+  status      APPOINTMENT_STATUS @default(PENDING)
+  officeId    String
+  office      Office  @relation(fields: [officeId], references: [id])
+  appointedAt DateTime @default(now())
+}
+
+model Feedback {
+  id String @id @default(uuid())
+  fullName String
+  email String?
+  phone String
+  comment String
+  status FEEDBACK_STATUS @default(PENDING)
+  officeId    String
+  office      Office  @relation(fields: [officeId], references: [id])
+  feedbackDate DateTime @default(now())
+}
+
+model Employee {
+  id         String   @id @default(uuid())
+  firstName  String
+  middleName String
+  lastName String
+  email String?
+  phone String
+  gender GENDER
+  salary Decimal
+  position String
+  status EMPLOYEE_STATUS @default(ACTIVE)
+  officeId String?
+  office Office? @relation(fields: [officeId], references: [id])
+  registeredAt DateTime @default(now())
+    updatedAt         DateTime  @updatedAt()
+}
+
+model UserActivity {
+  id          String   @id @default(uuid())
+  userId      String
+  action      USER_ACTIVITY_ACTION
+  data        Json[]
+  description String
+  timestamp   DateTime @default(now())
+    officeId    String?
+
+  office      Office?  @relation(fields: [officeId], references: [id])
+  user        User     @relation(fields: [userId], references: [id]) // Relating activity to a user
+}
+
+model UserReport {
+  id String @id @default(uuid())
+  userId String
+  startDate DateTime
+  endDate DateTime
+  description String
+  reportedAt DateTime @default(now())
+    officeId    String?
+
+  office      Office?  @relation(fields: [officeId], references: [id])
+}
+
+model HRRepost {
+  id String @id @default(uuid())
+  userId String
+  startDate DateTime
+  endDate DateTime
+  filePath String
+  fileName String
+  fileType String
+  reportedAt DateTime @default(now())
+  officeId    String?
+  office      Office?  @relation(fields: [officeId], references: [id])
+
+  reporter User @relation(fields: [userId], references: [id])
+}
+
+// Enums
+enum USER_STATUS {
+  ACTIVE
+  INACTIVE
+  DEACTIVATED
+  BLOCKED
+}
+
+enum USER_ROLE {
+  DATABASE_ADMIN
+  SYSTEM_ADMIN
+  HEAD
+  HR
+  FINANCE
+  RECEPTION
+  LAND_BANK
+  OFFICER
+  OTHER
+}
+
+enum USER_ACTIVITY_ACTION {
+  REGISTER
+  LOGIN
+  LOGOUT
+  UPDATE_PROFILE
+  UPDATE_PASSWORD
+  RESET_PASSWORD
+  DELETE_ACCOUNT
+  CREATE_LAND
+  UPDATE_LAND
+  DELETE_LAND
+  TRANSFER_LAND
+  CREATE_LAND_OWNER
+  UPDATE_LAND_OWNER
+  DELETE_LAND_OWNER
+  VIEW_LAND
+  VIEW_LAND_HISTORY
+}
+
+enum APPOINTMENT_STATUS {
+  PENDING
+  APPROVED
+  COMPLETED
+  REJECTED
+  CANCELLED
+}
+
+enum OFFICE_TYPE {
+  MAIN_OFFICE
+  SUB_CITY
+}
+
+enum GENDER {
+  MALE
+  FEMALE
+}
+
+// schema.prisma
+
+enum LAND_TYPE {
+  LEASE
+  PURCHASED
+  DONATED
+  INHERITED
+  AGRICULTURAL
+  COMMERCIAL
+  RESIDENTIAL
+  INDUSTRIAL
+  PUBLIC
+  CONSERVATION
+  RECREATIONAL
+  EDUCATIONAL
+  MEDICAL
+  RELIGIOUS
+  MILITARY
+  INFRASTRUCTURE
+  MIXED_USE
+  UNDEVELOPED
+  FORESTRY
+  WATER_RESOURCE
+  CULTURAL
+  HISTORICAL
+  NOT_ASSIGNED
+}
+
+enum LAND_STATUS {
+  VACANT
+  UNDER_CONSTRUCTION
+  DEVELOPED
+  OCCUPIED
+  LEASED
+  FOR_SALE
+  RESTRICTED
+  DISPUTED
+  ABANDONED
+  INACTIVE
+  DAMAGED
+  PENDING_DEVELOPMENT
+  RESERVED
+  UNDER_RENOVATION
+  FOR_RENT
+  NOT_AVAILABLE
+  HAZARDOUS
+  ENVIRONMENTALLY_SENSITIVE
+  CONTAMINATED
+  PROTECTED
+  TEMPORARILY_UNAVAILABLE
+  PERMANENTLY_UNAVAILABLE
+  NOT_ASSIGNED
+}
+
+
+enum OWNERSHIP_TYPE {
+  PRIVATE          // Land owned by an individual or private entity
+  GOVERNMENT       // Land owned by the government
+  ORGANIZATION     // Land owned by an organization or corporation
+  COOPERATIVE      // Land owned collectively by a group or cooperative
+  JOINT_OWNERSHIP  // Land owned by two or more parties (individuals or entities)
+  COMMUNITY        // Land collectively owned by a local community or tribe
+  TRUST            // Land held in a trust for the benefit of certain beneficiaries
+  NOT_ASSIGNED
+}
+
+enum EMPLOYEE_STATUS {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  TERMINATED
+  ON_LEAVE
+  RETIRED
+}
+
+enum FEEDBACK_STATUS {
+  PENDING 
+  RESOLVED
+  ARCHIVED
+}
+
+enum ANNOUNCEMENT_STATUS {
+  DRAFT 
+  PUBLISHED
+  ARCHIVED
+}
